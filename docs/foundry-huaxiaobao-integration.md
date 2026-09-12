@@ -179,13 +179,57 @@ root license exists. Separately validate each social provider's API terms,
 automation policy, account rights and content rules. Preserve license, copyright
 and attribution notices.
 
+## Executable offline contract boundary
+
+`scripts/foundry-huaxiaobao-contract.mjs` is a no-network planning and receipt-
+verification boundary for contract version
+`foundry.huaxiaobao.postiz.command.v1`. It deliberately does not contain an
+HTTP client or credentials. `scripts/foundry-huaxiaobao-contract.test.mjs` and
+`docs/foundry-huaxiaobao-postiz-command.example.json` exercise the boundary
+without contacting Postiz or a provider:
+
+```sh
+node --test scripts/foundry-huaxiaobao-contract.test.mjs
+node scripts/foundry-huaxiaobao-contract.mjs \
+  --plan docs/foundry-huaxiaobao-postiz-command.example.json
+```
+
+The planner exposes only `draft_create`, `schedule_create`, `status_query`,
+`cancel_group`, `analytics_query`, and `unknown_query_only`. A scheduled plan
+binds the exact content and integration-target hashes and requires a current
+approval whose expiry is later than both the planning time and intended
+execution time. Because native `postWorkflowV112` does not know the external
+approval, the safe plan initially persists a Postiz `DRAFT`; it does not arm the
+native workflow. At the due time `buildScheduledActivationPlan` requires a fresh
+read-back of that same draft, matching task/content/target versions and a known
+unrevoked approval, then emits the native draft-to-schedule status change. A
+plan is not an authorization token. Revocation, expiry, changed content, wrong
+tenant or restart without durable state stops activation. `UNKNOWN` produces
+GET-only status/read-back steps and can never turn into publish or republish.
+
+Native group deletion is a soft-delete plus best-effort Temporal termination,
+so the cancellation plan first requires Huaxiaobao to durably tombstone the
+deferred activation, then requires a read-back and reports that provider content
+was not retracted. A missing or ambiguous result remains
+unknown and query-only. This boundary does not modify the existing Temporal
+workflow.
+
+Postiz's current outbound callback is unsigned. Direct callbacks therefore do
+not meet this contract. Huaxiaobao must terminate a private ingress and wrap the
+unaltered raw body in `foundry.huaxiaobao.postiz.webhook-envelope.v1`, signed by
+an ingress-only HMAC secret. The verifier checks signature and freshness,
+derives a stable resource/body deduplication key independent of delivery ID,
+and returns a GET read-back plan. Callback acceptance is transport evidence,
+not business ACK; Foundry resumes only after typed verification is consumed.
+
 ## Current truth and blockers
 
 | Milestone | State at this baseline |
 | --- | --- |
 | Source/fork/branch record | Recorded above; source present locally |
-| Integration design | This document only |
-| Huaxiaobao adapter/capability contracts | Not present or proven by this change |
+| Integration design | Documented; no live integration claimed |
+| Offline planner/verifier | Implemented and covered by local contract tests; it performs no HTTP requests |
+| Huaxiaobao live adapter/capability activation | Not present or proven by this change |
 | Isolated deployment and health | Not run or proven |
 | Schedule/cancel/restart/duplicate/revocation tests | Not run or proven |
 | Real provider account validation | Blocked pending an authorized account per provider |

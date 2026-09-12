@@ -1,0 +1,28 @@
+{
+  "schema_version": "foundry.huaxiaobao.postiz.command.v1",
+  "command_id": "command-opaque-example",
+  "task_revision": 1,
+  "organization_ref": "organization-opaque-example",
+  "operation": "draft_create",
+  "content_version": 1,
+  "post_payload": {
+    "type": "draft",
+    "shortLink": false,
+    "date": "2030-01-02T00:00:00.000Z",
+    "tags": [],
+    "posts": [
+      {
+        "integration": {
+          "id": "integration-opaque-example"
+        },
+        "value": [
+          {
+            "content": "Draft prepared for review; this example does not publish it.",
+            "image": []
+          }
+        ],
+        "settings": {}
+      }
+    ]
+  }
+}

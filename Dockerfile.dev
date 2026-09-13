@@ -1,4 +1,6 @@
-FROM node:22.20-bookworm-slim
+# Keep the release build reproducible across tag updates. When upgrading Node,
+# refresh both the readable tag and the multi-platform manifest digest.
+FROM node:22.20-bookworm-slim@sha256:b21fe589dfbe5cc39365d0544b9be3f1f33f55f3c86c87a76ff65a02f8f5848e
 ARG NEXT_PUBLIC_VERSION
 ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,7 +24,7 @@ WORKDIR /app
 COPY . /app
 COPY var/docker/nginx.conf /etc/nginx/nginx.conf
 
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
 CMD ["sh", "-c", "nginx && pnpm run pm2"]
